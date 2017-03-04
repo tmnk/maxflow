@@ -1,56 +1,63 @@
 #include <iostream>
 #include <limits.h>
-
-const unsigned int MAX_VERTEX =       4004;
-const unsigned int MAX_EDGE   =      20004;
-const unsigned int MAX_WEIGHT =  UINT_MAX - 1;
-unsigned int numOfVertex, numOfEdge, sourceVertex, destinationVertex, edgeCount;
-unsigned int capacity[MAX_EDGE], onEnd[MAX_EDGE], nextEdge[MAX_EDGE], firstEdge[MAX_VERTEX], visited[MAX_VERTEX];
-
-void addEdge(unsigned int u, unsigned int v, unsigned int cap) {
-    onEnd[edgeCount] = v;
-    nextEdge[edgeCount] = firstEdge[u];
-    firstEdge[u] = edgeCount;
-    capacity[edgeCount++] = cap;
-    onEnd[edgeCount] = u;
-    nextEdge[edgeCount] = firstEdge[v];
-    firstEdge[v] = edgeCount;
-    capacity[edgeCount++] = 0;
-}
-
-unsigned int findFlow(unsigned int u, unsigned int flow) {
-    if (u == destinationVertex) return flow;
-    visited[u] = 1;
-    for (unsigned int edge = firstEdge[u]; edge != -1; edge = nextEdge[edge]) {
-        unsigned int to = onEnd[edge];
-        if (!visited[to] && capacity[edge] > 0) {
-            unsigned int minResult = findFlow(to, std::min(flow, capacity[edge]));
-            if (minResult > 0) {
-                capacity[edge]      -= minResult;
-                capacity[edge + 1]  += minResult;
-                return minResult;
+#include <string.h>
+#include <queue>
+bool *visited;
+int sourceVertex, destinationVertex, **graph, numOfVertex, numOfEdge;
+bool bfs(int s, int t, int parent[]) {
+    memset(visited, 0, sourceVertex * sizeof(bool));
+    std::queue <int> q;
+    q.push(s);
+    visited[s] = true;
+    parent[s] = -1;
+    while (!q.empty()) {
+        int u = q.front();
+        q.pop();
+        for (int v=0; v < numOfVertex; v++) {
+            if (visited[v]==false && graph[u][v] > 0) {
+                q.push(v);
+                parent[v] = u;
+                visited[v] = true;
             }
         }
     }
-    return 0;
+    return (visited[t] == true);
 }
 
+int fordFulkerson(int s, int t) {
+    int u, v;
+    int *parent = new int[numOfVertex];
+    int max_flow = 0;
+    while (bfs(s, t, parent)){
+        int path_flow = INT_MAX;
+        for (v=t; v!=s; v=parent[v]) {
+            u = parent[v];
+            path_flow = std::min(path_flow, graph[u][v]);
+        }
+ 
+        for (v=t; v != s; v=parent[v]) {
+            u = parent[v];
+            graph[u][v] -= path_flow;
+            graph[v][u] += path_flow;
+        }
+ 
+        max_flow += path_flow;
+    }
+    return max_flow;
+}
 int main() {
-    std::fill(firstEdge, firstEdge + MAX_VERTEX, -1);
-    std::cin >> numOfVertex >> numOfEdge;
+	std::cin >> numOfVertex >> numOfEdge;
 	if (!numOfEdge || !numOfVertex) return 0;
+	graph = new int*[numOfVertex];
+	for (int i = 0; i < sourceVertex; i++) graph[i] = new int[numOfVertex];
 	sourceVertex = 1;
 	destinationVertex = numOfVertex;
     for (unsigned int i = 0, u, v, weight; i < numOfEdge; i++) {
         std::cin >> u >> v >> weight;
-        addEdge(u, v, weight);
+        graph[u][v] = weight;
     }
-    unsigned int maxFlow = 0;
-    unsigned int iterationResult = 0;
-    while ((iterationResult = findFlow(sourceVertex, MAX_WEIGHT)) > 0) {
-        std::fill(visited, visited + MAX_VERTEX, 0);
-        maxFlow += iterationResult;
-    }
-    std::cout << maxFlow << std::endl;
+ 
+    std::cout << fordFulkerson(0, 5) << std::endl;
+ 
     return 0;
 }
